@@ -1,82 +1,87 @@
 import { Hono } from "hono";
-import { withAccelerate } from '@prisma/extension-accelerate';
-import { PrismaClient } from '@prisma/client/edge';  
-import { decode,sign, verify } from "hono/jwt";
-import {signupInputs,signinInputs} from "@rajnishthewolf/medium-common"
+import { withAccelerate } from "@prisma/extension-accelerate";
+import { PrismaClient } from "@prisma/client/edge";
+import { sign } from "hono/jwt";
+import { signupInputs, signinInputs } from "@rajnishthewolf/medium-common";
+
 export const userRouter = new Hono<{
     Bindings: {
-		DATABASE_URL: string;
+        DATABASE_URL: string;
         JWT_SECRET: string;
-	}
+    };
 }>();
 
+const prisma = new PrismaClient().$extends(withAccelerate());
+
 userRouter.post('/signup', async (c) => {
-	const body = await c.req.json();
-    const {success} = signupInputs.safeParse(body);
-    if(!success){
+    const body = await c.req.json();
+    const { success } = signupInputs.safeParse(body);
+    if (!success) {
         c.status(411);
         return c.json({
             message: "Inputs not correct"
         })
     }
-	const prisma = new PrismaClient({
-		datasources: { db: { url: c.env.DATABASE_URL } }
-	}).$extends(withAccelerate());
-
-	try {
-		const user = await prisma.user.create({
-			data: {
-				username: body.username,
-				password: body.password,
-				name: body.name,
-			}
-		});
-
-    const jwt = await sign({
-      id: user.id
-    }, c.env.JWT_SECRET);
-		return c.text(jwt);
-	} catch (e) {
-		console.error(e);
-		c.status(400);
-		return c.json({ error: 'Invalid input or internal error' });
-	}
-});
-
-userRouter.post('/signin', async (c) => {
-	const body = await c.req.json();
-    const {success} = signinInputs.safeParse(body);
-    if(!success){
+    const prisma = new PrismaClient({
+      datasourceUrl: c.env.DATABASE_URL,
+    }).$extends(withAccelerate())
+  
+    try {
+      const user = await prisma.user.create({
+        data: {
+          username: body.username,
+          password: body.password,
+          name: body.name
+        }
+      })
+      const jwt = await sign({
+        id: user.id
+      }, c.env.JWT_SECRET);
+  
+      return c.text(jwt)
+    } catch(e) {
+      console.log(e);
+      c.status(411);
+      return c.text('Invalid')
+    }
+  })
+  
+  
+  userRouter.post('/signin', async (c) => {
+    const body = await c.req.json();
+    const { success } = signinInputs.safeParse(body);
+    if (!success) {
         c.status(411);
         return c.json({
             message: "Inputs not correct"
         })
     }
-	const prisma = new PrismaClient({
-		datasources: { db: { url: c.env.DATABASE_URL } }
-	}).$extends(withAccelerate());
 
-	try {
-		const user = await prisma.user.findFirst({
-			where: {
-				username: body.username,
-				password: body.password,
-			}
-		});
-
-		if(!user){
-			c.status(403);
-			return c.json({
-				messege: "Invalid Credendials"
-		})
-		}
-    const jwt = await sign({
-      id: user.id
-    }, c.env.JWT_SECRET);
-
-	return c.text(jwt);
-	} catch (e) {
-		console.error(e);
-		c.status(400);
-		return c.json({ error: 'Invalid input or internal error' });
-	}});
+    const prisma = new PrismaClient({
+      datasourceUrl: c.env.DATABASE_URL,
+    }).$extends(withAccelerate())
+  
+    try {
+      const user = await prisma.user.findFirst({
+        where: {
+          username: body.username,
+          password: body.password,
+        }
+      })
+      if (!user) {
+        c.status(403);
+        return c.json({
+          message: "Incorrect creds"
+        })
+      }
+      const jwt = await sign({
+        id: user.id
+      }, c.env.JWT_SECRET);
+  
+      return c.text(jwt)
+    } catch(e) {
+      console.log(e);
+      c.status(411);
+      return c.text('Invalid')
+    }
+  })

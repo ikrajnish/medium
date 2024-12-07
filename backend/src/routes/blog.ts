@@ -16,26 +16,26 @@ export const blogRouter = new Hono<
 
 }>();
 
-blogRouter.use('/*',async (c,next) =>{
-    const authHeader = c.req.header("Authorization");
+blogRouter.use("/*", async (c, next) => {
+    const authHeader = c.req.header("authorization") || "";
     try {
-        const user = await verify(authHeader || "" ,c.env.JWT_SECRET) as {id: string} | null;
-        if (user && user.id) {
+        const user = await verify(authHeader, c.env.JWT_SECRET);
+        if (user) {
             c.set("userId", user.id);
             await next();
-        }else{
-            c.status(500);
+        } else {
+            c.status(403);
             return c.json({
-                message: " You are not logged in"
+                message: "You are not logged in"
             })
         }
-    }catch(e) {
+    } catch(e) {
         c.status(403);
-        return c.json({ message: "You are not logged in" });
+        return c.json({
+            message: "You are not logged in"
+        })
     }
-    
-
-})
+});
 
 
 blogRouter.post('/',async (c) => {
@@ -80,6 +80,7 @@ blogRouter.put('/',async (c) => {
             message: "Inputs are not correct"
         })
     }
+    
 	const prisma = new PrismaClient({
 		datasources: { db: { url: c.env.DATABASE_URL } }
 	}).$extends(withAccelerate());
@@ -105,27 +106,45 @@ blogRouter.put('/',async (c) => {
     
 });
 
-//  TODO ADD PAGINATION
 blogRouter.get('/bulk', async (c) => {
-	const prisma = new PrismaClient({
-		datasources: { db: { url: c.env.DATABASE_URL } }
-	}).$extends(withAccelerate());
-    const page = Number(c.req.query('page') || 1);
-    const limit = Number(c.req.query('limit') || 10);
-    const skip = (page - 1) * limit;
+    const authHeader = c.req.header('Authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        c.status(403);
+        return c.json({ message: 'Authorization token is missing or invalid' });
+    }
+
+    const token = authHeader.split(' ')[1];
 
     try {
+        const payload = await verify(token, c.env.JWT_SECRET);
+        console.log('Decoded JWT payload:', payload);
+
+        const prisma = new PrismaClient({
+            datasources: { db: { url: c.env.DATABASE_URL } }
+        }).$extends(withAccelerate());
+
         const blogs = await prisma.blog.findMany({
-            skip,
-            take: limit
+            select: {
+                content: true,
+                title: true,
+                id: true,
+                author: {
+                    select: {
+                        name: true
+                    }
+                }
+            }
         });
+
         return c.json({ blogs });
+
     } catch (error) {
-        c.status(500);
-        return c.json({ message: "Error while fetching blog posts" });
+        console.error('Token verification failed:', error);
+        c.status(403);
+        return c.json({ message: 'Invalid or expired token' });
     }
 });
-
 blogRouter.get('/:id',async (c) => {
     const id = c.req.param("id");
 	const prisma = new PrismaClient({
