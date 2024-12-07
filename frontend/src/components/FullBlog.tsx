@@ -7,6 +7,7 @@ export const FullBlog = ({ blog }: {blog: Blog}) => {
         return <div>Loading...</div>; 
     }
     return <div>
+        
         <Appbar />
         <div className="flex justify-center">
             <div className="grid grid-cols-12 px-10 w-full pt-200 max-w-screen-xl pt-12">
