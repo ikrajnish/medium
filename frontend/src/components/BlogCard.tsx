@@ -20,7 +20,7 @@ export const BlogCard = ({
 }: BlogCardProps) => {
     return (
         <Link to={`/blog/${id}`}>
-            <div className="p-6 max-w-screen-sm mx-auto bg-white rounded-lg shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out cursor-pointer">
+            <div className="p-6 max-w-screen-sm mx-auto bg-white rounded-lg shadow-lg hover:shadow-2xl transition-shadow duration-300 ease-in-out cursor-pointer mt-2">
                 {/* Image section */}
                 {image && (
                     <img
