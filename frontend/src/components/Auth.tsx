@@ -28,7 +28,7 @@ export const Auth = ({ type }: { type: "signup" | "signin" }) => {
             <div>
                 <div className="px-10">
                     <div className="text-3xl font-extrabold">
-                        {type === "signup" ? "Create an account" : "Login to your account"}
+                    {type === "signup" ? "Sign up for an account" : "Log in to your account"}
                     </div>
                     <div className="text-slate-500">
                         {type === "signin" ? "Don't have an account?" : "Already have an account?" }
